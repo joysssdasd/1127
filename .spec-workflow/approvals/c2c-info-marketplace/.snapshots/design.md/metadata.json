@@ -1,0 +1,22 @@
+{
+  "filePath": ".spec-workflow/specs/c2c-info-marketplace/design.md",
+  "currentVersion": 2,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-11-19T10:41:46.994Z",
+      "trigger": "initial",
+      "approvalId": "approval_1763548906987_53t1199b2",
+      "approvalTitle": "Design: c2c-info-marketplace"
+    },
+    {
+      "version": 2,
+      "filename": "snapshot-002.json",
+      "timestamp": "2025-11-19T11:03:11.592Z",
+      "trigger": "approved",
+      "approvalId": "approval_1763548906987_53t1199b2",
+      "approvalTitle": "Design: c2c-info-marketplace"
+    }
+  ]
+}

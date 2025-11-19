@@ -1,0 +1,31 @@
+{
+    "description": "C2C info marketplace monorepo",
+    "dependencies": {
+        "@supabase/supabase-js": "^2.83.0",
+        "@types/jest": "^30.0.0",
+        "@types/react": "^19.2.6",
+        "@types/react-dom": "^19.2.3",
+        "axios": "^1.13.2",
+        "bcrypt": "^6.0.0",
+        "class-transformer": "^0.5.1",
+        "class-validator": "^0.14.2",
+        "dayjs": "^1.11.19",
+        "jest": "^30.2.0",
+        "jsonwebtoken": "^9.0.2",
+        "lodash": "^4.17.21",
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0",
+        "reflect-metadata": "^0.2.2",
+        "ts-jest": "^29.4.5",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.9.3"
+    },
+    "name": "c2c-info-marketplace",
+    "version": "0.1.0",
+    "type": "commonjs",
+    "scripts": {
+        "lint": "echo 'todo'",
+        "build": "tsc -b",
+        "test": "jest"
+    }
+}

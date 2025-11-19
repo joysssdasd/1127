@@ -1,0 +1,14 @@
+{
+  "filePath": ".spec-workflow/specs/c2c-info-marketplace/requirements.md",
+  "currentVersion": 1,
+  "snapshots": [
+    {
+      "version": 1,
+      "filename": "snapshot-001.json",
+      "timestamp": "2025-11-19T08:57:06.957Z",
+      "trigger": "initial",
+      "approvalId": "approval_1763542626939_8y3nujskv",
+      "approvalTitle": "Requirements: c2c-info-marketplace"
+    }
+  ]
+}
