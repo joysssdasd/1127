@@ -1,26 +1,30 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { ListingController } from '../../backend/services/listing/listing.controller';
 import type { ListingPayload } from '../../backend/shared/contracts/listing';
+import { controllers } from '../../lib/server/controllers';
+import { requireAuth } from '../../lib/server/auth';
 
 type ListingsResponse = {
   data?: ListingPayload | ListingPayload[];
   error?: string;
 };
 
-const controller = new ListingController();
-
-async function handleGet(res: NextApiResponse<ListingsResponse>) {
+async function handleGet(req: NextApiRequest, res: NextApiResponse<ListingsResponse>) {
   try {
-    const data = await controller.list();
-    res.status(200).json({ data });
+    const keyword = typeof req.query.keyword === 'string' ? req.query.keyword.toLowerCase() : undefined;
+    const data = await controllers.listing.list();
+    const filtered = keyword
+      ? data.filter((item) => item.title.toLowerCase().includes(keyword) || item.description.toLowerCase().includes(keyword))
+      : data;
+    res.status(200).json({ data: filtered });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
 }
 
 async function handlePost(req: NextApiRequest, res: NextApiResponse<ListingsResponse>) {
-  const { sellerPhone, title, description, price } = req.body ?? {};
-  if (!sellerPhone || !title || !description || price === undefined) {
+  const auth = requireAuth(req);
+  const { title, description, price, tradeType = 'sell', keywords, aiAssist } = req.body ?? {};
+  if (!title || !description || price === undefined) {
     res.status(400).json({ error: '参数不完整' });
     return;
   }
@@ -32,12 +36,14 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse<ListingsResp
   }
 
   try {
-    const record = await controller.publish({
-      userId: String(sellerPhone).trim(),
+    const record = await controllers.listing.publish({
+      userId: auth.sub,
       title: String(title).trim(),
       description: String(description).trim(),
       price: numericPrice,
-      tradeType: 'sell',
+      tradeType,
+      keywords,
+      aiAssist: Boolean(aiAssist),
     });
     res.status(201).json({ data: record });
   } catch (error) {
@@ -47,7 +53,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse<ListingsResp
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<ListingsResponse>) {
   if (req.method === 'GET') {
-    await handleGet(res);
+    await handleGet(req, res);
     return;
   }
   if (req.method === 'POST') {

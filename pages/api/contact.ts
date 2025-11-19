@@ -1,15 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { DealController } from '../../backend/services/deal/contact-view.controller';
-import { ListingController } from '../../backend/services/listing/listing.controller';
 import type { PurchaseContactResult } from '../../backend/shared/contracts/deal';
+import { controllers } from '../../lib/server/controllers';
+import { requireAuth } from '../../lib/server/auth';
 
 type ContactResponse = {
   data?: PurchaseContactResult;
   error?: string;
 };
-
-const dealController = new DealController();
-const listingController = new ListingController();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<ContactResponse>) {
   if (req.method !== 'POST') {
@@ -18,22 +15,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     return;
   }
 
-  const { buyerPhone, postId } = req.body ?? {};
-  if (!buyerPhone || !postId) {
-    res.status(400).json({ error: '参数不完整' });
+  const auth = requireAuth(req);
+  const { postId } = req.body ?? {};
+  if (!postId) {
+    res.status(400).json({ error: '缺少信息ID' });
     return;
   }
 
   try {
-    const listing = await listingController.findById(String(postId).trim());
+    const listing = await controllers.listing.findById(String(postId).trim());
     if (!listing) {
       res.status(404).json({ error: '信息不存在' });
       return;
     }
 
-    const result = await dealController.purchaseContact({
+    const result = await controllers.deal.purchaseContact({
       postId: listing.id,
-      buyerId: String(buyerPhone).trim(),
+      buyerId: auth.sub,
       sellerId: listing.userId,
       price: listing.price,
     });

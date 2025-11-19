@@ -1,181 +1,138 @@
-﻿import { useEffect, useMemo, useState } from 'react';
-import type { FormEvent } from 'react';
-import styles from '../styles/Home.module.css';
-
-type Listing = {
-  id: string;
-  title: string;
-  description: string;
-  price: number;
-  totalDeals: number;
-  remainingViews: number;
-  viewLimit: number;
-};
-
-interface ApiResponse<T> {
-  data?: T;
-  error?: string;
-}
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import type { ListingPayload } from '../backend/shared/contracts/listing';
+import { MainLayout } from '../components/layout/MainLayout';
+import { useAuth } from '../components/auth/AuthContext';
+import { useToast } from '../hooks/useToast';
+import { Toast } from '../components/ui/Toast';
 
 export default function HomePage() {
-  const [listings, setListings] = useState<Listing[]>([]);
+  const { tokens, user } = useAuth();
+  const { message, show } = useToast();
+  const [listings, setListings] = useState<ListingPayload[]>([]);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    sellerPhone: '',
-    title: '',
-    description: '',
-    price: '0',
-  });
-  const [buyer, setBuyer] = useState({ buyerPhone: '', postId: '' });
+  const [keyword, setKeyword] = useState('');
+  const [searching, setSearching] = useState(false);
 
-  const hasEnv = useMemo(() => {
-    return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-  }, []);
-
-  const loadListings = async () => {
+  const loadListings = async (kw?: string) => {
     setLoading(true);
-    setMessage(null);
-    const res = await fetch('/api/listings');
-    const body: ApiResponse<Listing[]> = await res.json();
-    if (!res.ok || body.error) {
-      setMessage(body.error ?? '加载失败');
-    } else if (body.data) {
-      setListings(body.data);
+    try {
+      const query = kw ? `?keyword=${encodeURIComponent(kw)}` : '';
+      const res = await fetch(`/api/listings${query}`);
+      const data = await res.json();
+      setListings(data.data ?? []);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
     loadListings();
   }, []);
 
-  const submitListing = async (e: FormEvent) => {
-    e.preventDefault();
-    setMessage(null);
-    const payload = {
-      sellerPhone: form.sellerPhone.trim(),
-      title: form.title.trim(),
-      description: form.description.trim(),
-      price: Number(form.price),
-    };
-    const res = await fetch('/api/listings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const body: ApiResponse<Listing> = await res.json();
-    if (!res.ok || body.error) {
-      setMessage(body.error ?? '发布失败');
-    } else {
-      setMessage('发布成功');
-      setForm({ sellerPhone: '', title: '', description: '', price: '0' });
-      loadListings();
+  const runSearch = async () => {
+    if (!keyword.trim()) return loadListings();
+    setSearching(true);
+    try {
+      await loadListings(keyword.trim());
+      const authHeaders = tokens ? { Authorization: `Bearer ${tokens.accessToken}` } : undefined;
+      await fetch(`/api/search?keyword=${encodeURIComponent(keyword.trim())}`, authHeaders ? { headers: authHeaders } : undefined);
+    } catch (error) {
+      show((error as Error).message);
+    } finally {
+      setSearching(false);
     }
   };
 
-  const purchaseContact = async (e: FormEvent) => {
-    e.preventDefault();
-    setMessage(null);
-    const payload = {
-      buyerPhone: buyer.buyerPhone.trim(),
-      postId: buyer.postId.trim(),
-    };
-    const res = await fetch('/api/contact', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const body: ApiResponse<{ contactToken: string; confirmDeadline: string }> = await res.json();
-    if (!res.ok || body.error) {
-      setMessage(body.error ?? '购买失败');
-    } else if (body.data) {
-      setMessage(`已复制微信号，可用凭证 ${body.data.contactToken}，请在 ${new Date(body.data.confirmDeadline).toLocaleString()} 前确认成交`);
-      setBuyer({ buyerPhone: '', postId: '' });
+  const purchaseContact = async (id: string) => {
+    if (!tokens) {
+      show('请先登录后再获取联系方式');
+      return;
+    }
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${tokens.accessToken}`,
+        },
+        body: JSON.stringify({ postId: id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? '购买失败');
+      show(`购买成功，凭证 ${data.data.contactToken}`);
+    } catch (error) {
+      show((error as Error).message);
     }
   };
+
+  const stats = useMemo(() => {
+    const totalDeals = listings.reduce((acc, item) => acc + (item.totalDeals ?? 0), 0);
+    const totalViews = listings.reduce((acc, item) => acc + (item.remainingViews ?? 0), 0);
+    return [
+      { label: '在线信息', value: listings.length },
+      { label: '累计成交', value: totalDeals },
+      { label: '剩余查看额度', value: totalViews },
+    ];
+  }, [listings]);
 
   return (
-    <main className={styles.container}>
-      <h1>供需信息撮合平台 Demo</h1>
-      {!hasEnv && (
-        <p className={styles.warning}>尚未设置 NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY，无法读取数据。</p>
-      )}
-      {message && <p className={styles.message}>{message}</p>}
-
-      <section className={styles.card}>
-        <h2>发布信息</h2>
-        <form onSubmit={submitListing} className={styles.form}>
-          <input
-            placeholder="卖家手机号"
-            value={form.sellerPhone}
-            onChange={(e) => setForm({ ...form, sellerPhone: e.target.value })}
-            required
-          />
-          <input
-            placeholder="标题"
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-            required
-          />
-          <textarea
-            placeholder="描述"
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            rows={3}
-            required
-          />
-          <input
-            type="number"
-            min={0}
-            placeholder="价格"
-            value={form.price}
-            onChange={(e) => setForm({ ...form, price: e.target.value })}
-            required
-          />
-          <button type="submit">发布</button>
-        </form>
-      </section>
-
-      <section className={styles.card}>
-        <h2>购买联系方式</h2>
-        <form onSubmit={purchaseContact} className={styles.form}>
-          <input
-            placeholder="买家手机号"
-            value={buyer.buyerPhone}
-            onChange={(e) => setBuyer({ ...buyer, buyerPhone: e.target.value })}
-            required
-          />
-          <input
-            placeholder="信息ID"
-            value={buyer.postId}
-            onChange={(e) => setBuyer({ ...buyer, postId: e.target.value })}
-            required
-          />
-          <button type="submit">付1积分获取微信号</button>
-        </form>
-      </section>
-
-      <section className={styles.card}>
-        <div className={styles.header}>
-          <h2>最新信息</h2>
-          <button onClick={loadListings} disabled={loading}>
-            {loading ? '加载中…' : '刷新'}
-          </button>
+    <MainLayout>
+      <div className="page-section">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <h1 style={{ margin: 0 }}>交易信息撮合平台</h1>
+          <p style={{ color: 'var(--muted)', maxWidth: 600 }}>以积分驱动的C2C信息集市，支持72小时自动下架、成交率信用、关键词搜索和AI辅助发布。</p>
         </div>
-        <ul className={styles.list}>
-          {listings.map((item) => (
-            <li key={item.id}>
-              <div>
-                <strong>{item.title}</strong> ¥{item.price} ｜ 成交{item.totalDeals}次 ｜ 剩余{item.remainingViews}/{item.viewLimit}
-              </div>
-              <small>{item.description}</small>
-              <code>ID: {item.id}</code>
-            </li>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16, marginTop: 24 }}>
+          {stats.map((stat) => (
+            <div key={stat.label} style={{ background: '#f8fafc', borderRadius: 12, padding: 16 }}>
+              <div style={{ fontSize: 28, fontWeight: 700 }}>{stat.value}</div>
+              <div style={{ fontSize: 13, color: 'var(--muted)' }}>{stat.label}</div>
+            </div>
           ))}
-        </ul>
-        {listings.length === 0 && <p>暂无数据，试着发布一条吧。</p>}
-      </section>
-    </main>
+        </div>
+      </div>
+
+      <div className="page-section">
+        <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+          <input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="搜索标题 / 描述 / 关键词" style={{ flex: 1, borderRadius: 999, padding: '12px 20px', border: '1px solid var(--border)' }} />
+          <button className="primary-btn" onClick={runSearch} disabled={searching}>
+            {searching ? '搜索中...' : '智能搜索'}
+          </button>
+          <Link className="secondary-btn" href="/publish">
+            发布信息
+          </Link>
+        </div>
+        <div style={{ display: 'grid', gap: 18 }}>
+          {listings.map((listing) => (
+            <div key={listing.id} style={{ border: '1px solid var(--border)', borderRadius: 16, padding: 20, background: '#fff' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                <div>
+                  <h3 style={{ margin: '0 0 6px' }}>{listing.title}</h3>
+                  <p style={{ margin: 0, color: 'var(--muted)' }}>{listing.description}</p>
+                  <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: 13 }}>
+                    <span>¥{listing.price}</span>
+                    <span>剩余 {listing.remainingViews}/{listing.viewLimit} 次查看</span>
+                    <span>成交 {listing.totalDeals ?? 0} 次</span>
+                    <span>状态 {listing.status === 'active' ? '在售' : '已下架'}</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <Link className="secondary-btn" href={`/listings/${listing.id}`}>
+                    查看详情
+                  </Link>
+                  <button className="primary-btn" onClick={() => purchaseContact(listing.id)} disabled={!tokens || listing.status !== 'active'}>
+                    购买联系方式
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+          {listings.length === 0 && !loading && <p style={{ textAlign: 'center', color: 'var(--muted)' }}>暂无数据，试着搜索或发布一条吧。</p>}
+          {loading && <p style={{ textAlign: 'center' }}>加载中...</p>}
+        </div>
+      </div>
+      <Toast message={message} />
+    </MainLayout>
   );
 }

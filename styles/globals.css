@@ -1,0 +1,94 @@
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --bg: #f4f6fb;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+.page-section {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.05);
+  margin-bottom: 24px;
+}
+
+.form-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.form-grid label {
+  font-size: 14px;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.form-grid input,
+.form-grid textarea,
+.form-grid select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 15px;
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.primary-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.secondary-btn {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 14px;
+}
+
+.toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  background: #0f172a;
+  color: #fff;
+  padding: 14px 20px;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+  z-index: 1000;
+}

@@ -16,13 +16,17 @@ interface PendingSession {
 }
 
 export class WeChatAuthController implements AuthController {
-  private readonly users: UserRepository = createUserRepository();
+  private readonly users: UserRepository;
   private readonly authState = new AuthStateStore();
   private readonly otpService = new OtpService();
   private readonly bindService = new BindService(this.otpService, new SlidingWindowRateLimiter(3, 60 * 1000));
   private readonly sessionStore = new EphemeralSessionStore<PendingSession>(5 * 60 * 1000);
   private readonly jwt = new JwtService(process.env.JWT_SECRET ?? 'dev-secret', 60 * 60 * 24 * 30);
   private readonly refreshJwt = new JwtService(process.env.JWT_REFRESH_SECRET ?? 'dev-refresh', 60 * 60 * 24 * 90);
+
+  constructor(repo?: UserRepository) {
+    this.users = repo ?? createUserRepository();
+  }
 
   issueState(state: string, nonce: string, deviceId: string): void {
     this.authState.issue(state, nonce, deviceId);
