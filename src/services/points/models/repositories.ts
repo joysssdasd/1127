@@ -8,7 +8,7 @@ export interface PointTransaction {
   amount: number;
   balanceAfter: number;
   description: string;
-  referenceId?: string;
+  referenceId?: string | undefined;
   createdAt: Date;
 }
 
@@ -271,4 +271,5 @@ export function createRechargeRepository(): RechargeRepository {
     ? new SupabaseRechargeRepository()
     : new InMemoryRechargeRepository();
 }
+
 

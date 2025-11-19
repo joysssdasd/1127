@@ -10,9 +10,9 @@ export interface ContactViewRecord {
   sellerId: string;
   deductedPoints: number;
   copied: boolean;
-  copiedAt?: Date;
+  copiedAt?: Date | undefined;
   confirmStatus: ConfirmStatus;
-  confirmPayload?: string;
+  confirmPayload?: string | undefined;
   confirmDeadline: Date;
   createdAt: Date;
 }
@@ -230,3 +230,4 @@ export class SupabaseDealStatRepository implements DealStatRepository {
     return { postId, sellerId: updated.seller_id, totalDeals: updated.total_deals, updatedAt: new Date(updated.updated_at) };
   }
 }
+

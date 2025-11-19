@@ -65,3 +65,4 @@ export function createPointsClient(): PointsClient {
   }
   return new InMemoryPointsClient();
 }
+
