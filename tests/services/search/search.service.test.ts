@@ -1,7 +1,7 @@
-﻿import { SearchService } from '../../../src/services/search/search.service';
-import { InMemoryListingRepository } from '../../../src/services/listing/repositories/listing.repo';
-import { InMemorySearchHistoryStore } from '../../../src/services/search/search-history.service';
-import { ListingPayload } from '../../../src/shared/contracts/listing';
+﻿import { SearchService } from '../../../backend/services/search/search.service';
+import { InMemoryListingRepository } from '../../../backend/services/listing/repositories/listing.repo';
+import { InMemorySearchHistoryStore } from '../../../backend/services/search/search-history.service';
+import { ListingPayload } from '../../../backend/shared/contracts/listing';
 
 function createListing(overrides: Partial<ListingPayload>): ListingPayload {
   const now = new Date();

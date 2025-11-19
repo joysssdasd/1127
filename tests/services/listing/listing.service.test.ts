@@ -1,8 +1,8 @@
-﻿import { ListingService } from '../../../src/services/listing/listing.service';
-import { InMemoryListingRepository } from '../../../src/services/listing/repositories/listing.repo';
-import { DomainEventBus } from '../../../src/shared/utils/eventBus';
-import { PointsClient } from '../../../src/shared/contracts/points';
-import { AiGatewayClient } from '../../../src/shared/contracts/ai';
+﻿import { ListingService } from '../../../backend/services/listing/listing.service';
+import { InMemoryListingRepository } from '../../../backend/services/listing/repositories/listing.repo';
+import { DomainEventBus } from '../../../backend/shared/utils/eventBus';
+import { PointsClient } from '../../../backend/shared/contracts/points';
+import { AiGatewayClient } from '../../../backend/shared/contracts/ai';
 
 class MockPoints implements PointsClient {
   public calls: Array<{ userId: string; amount: number; reason: string }> = [];

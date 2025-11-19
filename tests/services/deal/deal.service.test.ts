@@ -1,11 +1,11 @@
-﻿import { DealService } from '../../../src/services/deal/deal.service';
+﻿import { DealService } from '../../../backend/services/deal/deal.service';
 import {
   InMemoryContactViewRepository,
   InMemoryDealStatRepository,
-} from '../../../src/services/deal/models/contact-view.entity';
-import { InMemoryListingRepository } from '../../../src/services/listing/repositories/listing.repo';
-import { PointsClient } from '../../../src/shared/contracts/points';
-import { DomainEventBus } from '../../../src/shared/utils/eventBus';
+} from '../../../backend/services/deal/models/contact-view.entity';
+import { InMemoryListingRepository } from '../../../backend/services/listing/repositories/listing.repo';
+import { PointsClient } from '../../../backend/shared/contracts/points';
+import { DomainEventBus } from '../../../backend/shared/utils/eventBus';
 
 class MockPoints implements PointsClient {
   public deductions: Array<{ userId: string; amount: number; reason: string }> = [];

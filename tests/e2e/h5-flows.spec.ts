@@ -1,9 +1,9 @@
-﻿import { WeChatAuthController } from '../../src/services/auth/wechat.controller';
-import { ListingController } from '../../src/services/listing/listing.controller';
-import { DealController } from '../../src/services/deal/contact-view.controller';
-import { SearchService } from '../../src/services/search/search.service';
-import { InMemoryListingRepository } from '../../src/services/listing/repositories/listing.repo';
-import { InMemorySearchHistoryStore } from '../../src/services/search/search-history.service';
+﻿import { WeChatAuthController } from '../../backend/services/auth/wechat.controller';
+import { ListingController } from '../../backend/services/listing/listing.controller';
+import { DealController } from '../../backend/services/deal/contact-view.controller';
+import { SearchService } from '../../backend/services/search/search.service';
+import { InMemoryListingRepository } from '../../backend/services/listing/repositories/listing.repo';
+import { InMemorySearchHistoryStore } from '../../backend/services/search/search-history.service';
 
 const auth = new WeChatAuthController();
 const listingRepo = new InMemoryListingRepository();

@@ -1,4 +1,4 @@
-﻿import { metrics } from '../../src/shared/observability/metrics';
+﻿import { metrics } from '../../backend/shared/observability/metrics';
 
 describe('metrics registry', () => {
   it('increments counters', () => {

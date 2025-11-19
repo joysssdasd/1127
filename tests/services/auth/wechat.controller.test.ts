@@ -1,4 +1,4 @@
-﻿import { WeChatAuthController } from '../../../src/services/auth/wechat.controller';
+﻿import { WeChatAuthController } from '../../../backend/services/auth/wechat.controller';
 
 describe('WeChatAuthController', () => {
   const device = { deviceId: 'device-1', userAgent: 'jest', ipAddress: '127.0.0.1' };

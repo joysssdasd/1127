@@ -3,8 +3,8 @@
     "dependencies": {
         "@supabase/supabase-js": "^2.83.0",
         "@types/jest": "^30.0.0",
-        "@types/react": "^19.2.6",
-        "@types/react-dom": "^19.2.3",
+        "@types/react": "^18.3.27",
+        "@types/react-dom": "^18.3.0",
         "axios": "^1.13.2",
         "bcrypt": "^6.0.0",
         "class-transformer": "^0.5.1",
@@ -13,8 +13,9 @@
         "jest": "^30.2.0",
         "jsonwebtoken": "^9.0.2",
         "lodash": "^4.17.21",
-        "react": "^19.2.0",
-        "react-dom": "^19.2.0",
+        "next": "^14.2.33",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
         "reflect-metadata": "^0.2.2",
         "ts-jest": "^29.4.5",
         "ts-node": "^10.9.2",
@@ -22,10 +23,15 @@
     },
     "name": "c2c-info-marketplace",
     "version": "0.1.0",
-    "type": "commonjs",
     "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
         "lint": "echo 'todo'",
-        "build": "tsc -b",
         "test": "jest"
+    },
+    "devDependencies": {
+        "@types/jsonwebtoken": "^9.0.10",
+        "@types/node": "^22.10.1"
     }
 }

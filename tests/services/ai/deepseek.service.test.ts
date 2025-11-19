@@ -1,5 +1,5 @@
-﻿import { DeepSeekService } from '../../../src/services/ai-gateway/deepseek.service';
-import { SecureStore } from '../../../src/services/ai-gateway/config/secure-store';
+﻿import { DeepSeekService } from '../../../backend/services/ai-gateway/deepseek.service';
+import { SecureStore } from '../../../backend/services/ai-gateway/config/secure-store';
 import { AxiosInstance } from 'axios';
 
 class FakeAxios implements AxiosInstance {

@@ -1,7 +1,7 @@
-﻿import { InMemoryLedgerRepository, InMemoryRechargeRepository } from '../../../src/services/points/models/repositories';
-import { LedgerService, RechargeService } from '../../../src/services/points/ledger.service';
-import { RechargeReminderWorker } from '../../../src/services/points/workers/rechargeReminder.worker';
-import { DomainEventBus } from '../../../src/shared/utils/eventBus';
+﻿import { InMemoryLedgerRepository, InMemoryRechargeRepository } from '../../../backend/services/points/models/repositories';
+import { LedgerService, RechargeService } from '../../../backend/services/points/ledger.service';
+import { RechargeReminderWorker } from '../../../backend/services/points/workers/rechargeReminder.worker';
+import { DomainEventBus } from '../../../backend/shared/utils/eventBus';
 
 describe('Points ledger', () => {
   const ledgerRepo = new InMemoryLedgerRepository();
