@@ -3,23 +3,29 @@ import { UserProfile } from './user';
 import { getSupabaseClient } from '../../infrastructure/supabase/client';
 
 export interface UserRepository {
+  findById(id: string): Promise<UserProfile | undefined>;
   findByPhone(phone: string): Promise<UserProfile | undefined>;
-  createWithPhone(phone: string, passwordHash: string): Promise<UserProfile>;
+  createWithPhone(phone: string, passwordHash: string, wechat?: string): Promise<UserProfile>;
   update(profile: UserProfile): Promise<UserProfile>;
 }
 
 export class InMemoryUserRepository implements UserRepository {
   private readonly users: Map<string, UserProfile> = new Map();
 
+  async findById(id: string): Promise<UserProfile | undefined> {
+    return this.users.get(id);
+  }
+
   async findByPhone(phone: string): Promise<UserProfile | undefined> {
     return [...this.users.values()].find((u) => u.phone === phone);
   }
 
-  async createWithPhone(phone: string, passwordHash: string): Promise<UserProfile> {
+  async createWithPhone(phone: string, passwordHash: string, wechat?: string): Promise<UserProfile> {
     const now = new Date();
     const profile: UserProfile = {
       id: crypto.randomUUID(),
       phone,
+      wechat,
       passwordHash,
       status: 'active',
       createdAt: now,
@@ -42,6 +48,7 @@ type UserRow = {
   id: string;
   phone?: string | null;
   password_hash?: string | null;
+  wechat_contact?: string | null;
   points: number;
   total_deals: number;
   status: string;
@@ -56,6 +63,7 @@ export class SupabaseUserRepository implements UserRepository {
     return {
       id: row.id,
       phone: row.phone ?? undefined,
+      wechat: row.wechat_contact ?? undefined,
       status: (row.status as UserProfile['status']) ?? 'pending',
       passwordHash: row.password_hash ?? undefined,
       createdAt: new Date(row.created_at),
@@ -63,6 +71,14 @@ export class SupabaseUserRepository implements UserRepository {
       points: row.points,
       totalDeals: row.total_deals,
     } as UserProfile;
+  }
+
+  async findById(id: string): Promise<UserProfile | undefined> {
+    const { data, error } = await this.client.from('users').select('*').eq('id', id).maybeSingle();
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+    return data ? this.map(data as UserRow) : undefined;
   }
 
   async findByPhone(phone: string): Promise<UserProfile | undefined> {
@@ -73,12 +89,13 @@ export class SupabaseUserRepository implements UserRepository {
     return data ? this.map(data as UserRow) : undefined;
   }
 
-  async createWithPhone(phone: string, passwordHash: string): Promise<UserProfile> {
+  async createWithPhone(phone: string, passwordHash: string, wechat?: string): Promise<UserProfile> {
     const { data, error } = await this.client
       .from('users')
       .insert({
         phone,
         password_hash: passwordHash,
+        wechat_contact: wechat ?? null,
         status: 'active',
       })
       .select('*')
@@ -95,6 +112,7 @@ export class SupabaseUserRepository implements UserRepository {
       .update({
         phone: profile.phone ?? null,
         password_hash: profile.passwordHash ?? null,
+        wechat_contact: profile.wechat ?? null,
         status: profile.status,
         points: profile.points ?? 0,
         total_deals: profile.totalDeals ?? 0,
