@@ -1,0 +1,154 @@
+{
+  "scanTimestamp": "2025-11-21T00:00:00.000Z",
+  "projectInfo": {
+    "name": "c2c-info-marketplace",
+    "description": "C2C info marketplace monorepo",
+    "version": "0.1.0",
+    "rootPath": "C:\\Users\\big\\Desktop\\codex本地"
+  },
+  "modules": [
+    {
+      "path": "backend/services/auth",
+      "name": "auth",
+      "language": "typescript",
+      "entryPoint": "backend/services/auth/sms.controller.ts",
+      "interfaces": ["login", "send-code"],
+      "tests": ["tests/services/auth/sms.controller.test.ts"],
+      "config": [],
+      "dataModels": [],
+      "coverage": "high"
+    },
+    {
+      "path": "backend/services/listing",
+      "name": "listing",
+      "language": "typescript",
+      "entryPoint": "backend/services/listing/listing.service.ts",
+      "interfaces": ["backend/services/listing/listing.controller.ts"],
+      "tests": ["tests/services/listing/listing.service.test.ts"],
+      "config": ["backend/services/listing/validators.ts"],
+      "dataModels": [],
+      "coverage": "high"
+    },
+    {
+      "path": "backend/services/deal",
+      "name": "deal",
+      "language": "typescript",
+      "entryPoint": "backend/services/deal/deal.service.ts",
+      "interfaces": ["backend/services/deal/contact-view.controller.ts"],
+      "tests": ["tests/services/deal/deal.service.test.ts"],
+      "config": [],
+      "dataModels": ["backend/services/deal/models/contact-view.entity.ts"],
+      "coverage": "high"
+    },
+    {
+      "path": "backend/services/search",
+      "name": "search",
+      "language": "typescript",
+      "entryPoint": "backend/services/search/search.service.ts",
+      "interfaces": ["backend/services/search/search.controller.ts"],
+      "tests": ["tests/services/search/search.service.test.ts"],
+      "config": ["backend/services/search/query-builders/listingQueryBuilder.ts"],
+      "dataModels": ["backend/services/search/search-history.service.ts"],
+      "coverage": "medium"
+    },
+    {
+      "path": "backend/services/points",
+      "name": "points",
+      "language": "typescript",
+      "entryPoint": "backend/services/points/ledger.service.ts",
+      "interfaces": [],
+      "tests": ["tests/services/points/ledger.service.test.ts"],
+      "config": [],
+      "dataModels": ["backend/services/points/models/repositories.ts"],
+      "coverage": "medium"
+    },
+    {
+      "path": "backend/services/ai-gateway",
+      "name": "ai-gateway",
+      "language": "typescript",
+      "entryPoint": "backend/services/ai-gateway/deepseek.service.ts",
+      "interfaces": ["backend/services/ai-gateway/deepseek.controller.ts"],
+      "tests": ["tests/services/ai/deepseek.service.test.ts"],
+      "config": ["backend/services/ai-gateway/config/secure-store.ts"],
+      "dataModels": [],
+      "coverage": "medium"
+    },
+    {
+      "path": "backend/apps/admin",
+      "name": "admin",
+      "language": "typescript",
+      "entryPoint": "backend/apps/admin/App.tsx",
+      "interfaces": [],
+      "tests": [],
+      "config": [],
+      "dataModels": [],
+      "coverage": "low"
+    },
+    {
+      "path": "pages",
+      "name": "frontend",
+      "language": "typescript",
+      "entryPoint": "pages/_app.tsx",
+      "interfaces": ["pages/api/**"],
+      "tests": [],
+      "config": [],
+      "dataModels": [],
+      "coverage": "medium"
+    }
+  ],
+  "coverage": {
+    "totalFilesEstimated": 67,
+    "filesScanned": 45,
+    "coveragePercentage": 67.2,
+    "ignoredFiles": 22,
+    "ignoredDirectories": [
+      "node_modules/",
+      "dist/",
+      "coverage/",
+      ".next/",
+      ".env.*",
+      "scripts/*.log"
+    ],
+    "gaps": [
+      {
+        "module": "frontend",
+        "missing": "UI组件测试、页面组件测试",
+        "priority": "medium"
+      },
+      {
+        "module": "admin",
+        "missing": "管理界面组件测试",
+        "priority": "low"
+      },
+      {
+        "module": "points",
+        "missing": "充值服务接口定义",
+        "priority": "medium"
+      }
+    ]
+  },
+  "technologyStack": {
+    "framework": "Next.js 14.2.33",
+    "language": "TypeScript 5.9.3",
+    "runtime": "Node.js",
+    "database": "Supabase",
+    "testing": "Jest + ts-jest",
+    "deployment": "Vercel"
+  },
+  "keyPaths": {
+    "packageJson": "package.json",
+    "tsConfig": "tsconfig.json",
+    "nextConfig": "next.config.js",
+    "testConfig": "jest.config.cjs",
+    "deploymentConfig": "vercel.json",
+    "controllersRegistry": "lib/server/controllers.ts",
+    "databaseClient": "backend/infrastructure/supabase/client.ts",
+    "sharedContracts": "backend/shared/contracts/"
+  },
+  "truncated": false,
+  "nextScanRecommendations": [
+    "pages/components/** - 前端组件详细分析",
+    "backend/services/points/workers/** - 积分系统后台任务",
+    "backend/apps/admin/** - 管理界面组件实现"
+  ]
+}
