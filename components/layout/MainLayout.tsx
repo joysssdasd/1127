@@ -8,7 +8,6 @@ const links = [
   { href: '/search', label: '智能搜索' },
   { href: '/recharge', label: '积分充值' },
   { href: '/me', label: '个人中心' },
-  { href: '/admin', label: '后台入口' },
 ];
 
 export function MainLayout({ children }: { children: ReactNode }) {

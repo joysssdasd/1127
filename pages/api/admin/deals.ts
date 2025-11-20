@@ -1,10 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { controllers } from '../../../lib/server/controllers';
-import { requireAdmin } from '../../../lib/server/admin';
+import { requireAuth } from '../../../lib/server/auth';
+import { Errors } from '../../../backend/shared/utils/errors';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    requireAdmin(req);
+    const payload = requireAuth(req);
+    if (payload.role !== 'admin') {
+      throw Errors.AdminOnly;
+    }
   } catch (error) {
     res.status(401).json({ error: (error as Error).message });
     return;

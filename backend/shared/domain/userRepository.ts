@@ -1,33 +1,31 @@
 ﻿import crypto from 'crypto';
-import { AuthIdentifier, UserProfile } from './user';
+import { UserProfile } from './user';
 import { getSupabaseClient } from '../../infrastructure/supabase/client';
 
 export interface UserRepository {
-  findByOpenId(openId: string): Promise<UserProfile | undefined>;
   findByPhone(phone: string): Promise<UserProfile | undefined>;
-  createWithWeChat(wechat: AuthIdentifier): Promise<UserProfile>;
+  createWithPhone(phone: string, passwordHash: string): Promise<UserProfile>;
   update(profile: UserProfile): Promise<UserProfile>;
 }
 
 export class InMemoryUserRepository implements UserRepository {
   private readonly users: Map<string, UserProfile> = new Map();
 
-  async findByOpenId(openId: string): Promise<UserProfile | undefined> {
-    return [...this.users.values()].find((u) => u.wechat?.openId === openId);
-  }
-
   async findByPhone(phone: string): Promise<UserProfile | undefined> {
     return [...this.users.values()].find((u) => u.phone === phone);
   }
 
-  async createWithWeChat(wechat: AuthIdentifier): Promise<UserProfile> {
+  async createWithPhone(phone: string, passwordHash: string): Promise<UserProfile> {
     const now = new Date();
     const profile: UserProfile = {
       id: crypto.randomUUID(),
-      wechat,
-      status: 'pending',
+      phone,
+      passwordHash,
+      status: 'active',
       createdAt: now,
       updatedAt: now,
+      points: 0,
+      totalDeals: 0,
     };
     this.users.set(profile.id, profile);
     return profile;
@@ -43,8 +41,7 @@ export class InMemoryUserRepository implements UserRepository {
 type UserRow = {
   id: string;
   phone?: string | null;
-  wechat_openid?: string | null;
-  wechat_unionid?: string | null;
+  password_hash?: string | null;
   points: number;
   total_deals: number;
   status: string;
@@ -59,23 +56,13 @@ export class SupabaseUserRepository implements UserRepository {
     return {
       id: row.id,
       phone: row.phone ?? undefined,
-      wechat: row.wechat_openid
-        ? { openId: row.wechat_openid, unionId: row.wechat_unionid ?? undefined }
-        : undefined,
       status: (row.status as UserProfile['status']) ?? 'pending',
+      passwordHash: row.password_hash ?? undefined,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
       points: row.points,
       totalDeals: row.total_deals,
     } as UserProfile;
-  }
-
-  async findByOpenId(openId: string): Promise<UserProfile | undefined> {
-    const { data, error } = await this.client.from('users').select('*').eq('wechat_openid', openId).maybeSingle();
-    if (error && error.code !== 'PGRST116') {
-      throw error;
-    }
-    return data ? this.map(data as UserRow) : undefined;
   }
 
   async findByPhone(phone: string): Promise<UserProfile | undefined> {
@@ -86,13 +73,13 @@ export class SupabaseUserRepository implements UserRepository {
     return data ? this.map(data as UserRow) : undefined;
   }
 
-  async createWithWeChat(wechat: AuthIdentifier): Promise<UserProfile> {
+  async createWithPhone(phone: string, passwordHash: string): Promise<UserProfile> {
     const { data, error } = await this.client
       .from('users')
       .insert({
-        wechat_openid: wechat.openId,
-        wechat_unionid: wechat.unionId ?? null,
-        status: 'pending',
+        phone,
+        password_hash: passwordHash,
+        status: 'active',
       })
       .select('*')
       .single();
@@ -107,8 +94,7 @@ export class SupabaseUserRepository implements UserRepository {
       .from('users')
       .update({
         phone: profile.phone ?? null,
-        wechat_openid: profile.wechat?.openId ?? null,
-        wechat_unionid: profile.wechat?.unionId ?? null,
+        password_hash: profile.passwordHash ?? null,
         status: profile.status,
         points: profile.points ?? 0,
         total_deals: profile.totalDeals ?? 0,

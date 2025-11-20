@@ -1,24 +1,17 @@
-﻿import { WeChatAuthController } from '../../backend/services/auth/wechat.controller';
 import { ListingController } from '../../backend/services/listing/listing.controller';
 import { DealController } from '../../backend/services/deal/contact-view.controller';
 import { SearchService } from '../../backend/services/search/search.service';
 import { InMemoryListingRepository } from '../../backend/services/listing/repositories/listing.repo';
 import { InMemorySearchHistoryStore } from '../../backend/services/search/search-history.service';
 
-const auth = new WeChatAuthController();
 const listingRepo = new InMemoryListingRepository();
 const listing = new ListingController(undefined, listingRepo);
 const deal = new DealController();
 const search = new SearchService(listingRepo, new InMemorySearchHistoryStore());
 
-describe('H5 user journey', () => {
-  it('registers, publishes, searches, and confirms deal', async () => {
-    auth.issueState('s', 'n', 'device');
-    const login = await auth.startWeChatLogin({ state: 's', nonce: 'n', code: 'wx', device: { deviceId: 'device' } });
-    auth.issueOtp('13800000000', '123456');
-    await auth.bindPhone({ sessionToken: login.sessionToken, phone: '13800000000', otp: '123456' });
-
-    const created = await listing.publish({ userId: 'seller', title: 'Switch OLED', description: '9成新，带票保修且支持面交', price: 2200, tradeType: 'sell' });
+describe('User journey without UI', () => {
+  it('publishes, searches, purchases contact and confirms deal', async () => {
+    const created = await listing.publish({ userId: 'seller', title: 'Switch OLED', description: 'Switch OLED 九成新，含发票，可当面交易', price: 2200, tradeType: 'sell' });
     const results = await search.search({ keyword: 'switch' });
     expect(results.map((r) => r.id)).toContain(created.id);
 
@@ -28,4 +21,3 @@ describe('H5 user journey', () => {
     await deal.confirmDeal({ contactViewId: target.id, buyerId: target.buyerId, payload: '完成交易' });
   });
 });
-

@@ -11,12 +11,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const payload = requireAuth(req);
     const repo = getUserRepository();
-    const user = await repo.findByOpenId(payload.openId);
+    const user = await repo.findByPhone(payload.phone);
     if (!user) {
       res.status(404).json({ error: '用户不存在' });
       return;
     }
-    res.status(200).json({ user, payload });
+    res.status(200).json({ user, isAdmin: payload.role === 'admin' });
   } catch (error) {
     res.status(401).json({ error: (error as Error).message });
   }

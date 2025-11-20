@@ -1,0 +1,111 @@
+import bcrypt from 'bcrypt';
+import { createUserRepository, UserRepository } from '../../shared/domain/userRepository';
+import type { UserProfile } from '../../shared/domain/user';
+import { OtpService } from '../../shared/utils/otp';
+import { SlidingWindowRateLimiter } from '../../shared/utils/rateLimiter';
+import { JwtService } from '../../shared/utils/jwt';
+import { Errors } from '../../shared/utils/errors';
+import { sendVerificationCode } from '../../infrastructure/sms/spugClient';
+
+type SmsSender = (phone: string, code: string) => Promise<void>;
+
+const DEFAULT_ADMIN_PHONES = (process.env.ADMIN_PHONES ?? '13011319329,13001220766')
+  .split(',')
+  .map((p) => p.trim())
+  .filter(Boolean);
+
+function normalizePhone(phone: string): string {
+  return phone.trim();
+}
+
+export class SmsPasswordAuthController {
+  private readonly users: UserRepository;
+  private readonly otp: OtpService;
+  private readonly sendSms: SmsSender;
+  private readonly rateLimiter: SlidingWindowRateLimiter;
+  private readonly jwt: JwtService;
+  private readonly refreshJwt: JwtService;
+  private readonly adminPhones: Set<string>;
+
+  constructor(
+    options?: {
+      repository?: UserRepository;
+      smsSender?: SmsSender;
+      otpService?: OtpService;
+      rateLimiter?: SlidingWindowRateLimiter;
+    },
+  ) {
+    this.users = options?.repository ?? createUserRepository();
+    this.otp = options?.otpService ?? new OtpService();
+    this.sendSms = options?.smsSender ?? sendVerificationCode;
+    this.rateLimiter = options?.rateLimiter ?? new SlidingWindowRateLimiter(5, 60 * 1000);
+    this.jwt = new JwtService(process.env.JWT_SECRET ?? 'dev-secret', 60 * 60 * 24 * 30);
+    this.refreshJwt = new JwtService(process.env.JWT_REFRESH_SECRET ?? 'dev-refresh', 60 * 60 * 24 * 90);
+    this.adminPhones = new Set(DEFAULT_ADMIN_PHONES);
+  }
+
+  async sendCode(phone: string): Promise<void> {
+    const normalized = normalizePhone(phone);
+    if (!this.rateLimiter.allow(normalized)) {
+      throw Errors.RateLimited;
+    }
+    const code = this.generateCode();
+    this.otp.issue(normalized, code);
+    await this.sendSms(normalized, code);
+  }
+
+  async login(input: { phone: string; password: string; code: string }) {
+    const phone = normalizePhone(input.phone);
+    if (!this.otp.verify(phone, input.code)) {
+      throw Errors.OtpInvalid;
+    }
+    if (!input.password || input.password.length < 6) {
+      throw Errors.PasswordTooWeak;
+    }
+
+    let user = await this.users.findByPhone(phone);
+    if (!user) {
+      const passwordHash = await bcrypt.hash(input.password, 10);
+      user = await this.users.createWithPhone(phone, passwordHash);
+    } else {
+      await this.ensurePasswordMatches(user, input.password);
+    }
+    user.status = 'active';
+    await this.users.update(user);
+
+    const isAdmin = this.adminPhones.has(phone);
+    const tokens = this.issueTokens(user, isAdmin);
+    return { tokens, user: this.stripSensitive(user), isAdmin };
+  }
+
+  private async ensurePasswordMatches(user: UserProfile, password: string): Promise<void> {
+    if (!user.passwordHash) {
+      const hash = await bcrypt.hash(password, 10);
+      user.passwordHash = hash;
+      return;
+    }
+    const ok = await bcrypt.compare(password, user.passwordHash);
+    if (!ok) {
+      throw Errors.InvalidCredentials;
+    }
+  }
+
+  private generateCode(): string {
+    return (Math.floor(Math.random() * 900000) + 100000).toString();
+  }
+
+  private issueTokens(user: UserProfile, isAdmin: boolean) {
+    const payload = { sub: user.id, phone: user.phone ?? '', role: isAdmin ? 'admin' : 'user' } as const;
+    return {
+      accessToken: this.jwt.issue(payload),
+      refreshToken: this.refreshJwt.issue(payload),
+      expiresIn: 60 * 60 * 24 * 30,
+    };
+  }
+
+  private stripSensitive(user: UserProfile): UserProfile {
+    const cloned: UserProfile = { ...user };
+    delete cloned.passwordHash;
+    return cloned;
+  }
+}

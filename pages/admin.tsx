@@ -1,56 +1,58 @@
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import { MainLayout } from '../components/layout/MainLayout';
-import { Toast } from '../components/ui/Toast';
 import { useToast } from '../hooks/useToast';
+import { Toast } from '../components/ui/Toast';
 import type { RechargeTask } from '../backend/services/points/models/repositories';
 import type { ContactViewRecord } from '../backend/services/deal/models/contact-view.entity';
-
-const STORAGE_KEY = 'admin-key';
+import { useAuth } from '../components/auth/AuthContext';
 
 export default function AdminPage() {
+  const router = useRouter();
+  const { tokens, isAdmin, loading } = useAuth();
   const { message, show } = useToast();
-  const [adminKey, setAdminKey] = useState('');
   const [recharges, setRecharges] = useState<RechargeTask[]>([]);
   const [deals, setDeals] = useState<ContactViewRecord[]>([]);
 
+  const authHeaders = tokens ? { Authorization: `Bearer ${tokens.accessToken}` } : undefined;
+
   useEffect(() => {
-    const saved = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null;
-    if (saved) {
-      setAdminKey(saved);
-      refreshData(saved);
+    if (!loading) {
+      if (!tokens || !isAdmin) {
+        show('该页面仅管理员可访问');
+        router.replace('/');
+      } else {
+        refreshData();
+      }
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, tokens, isAdmin]);
 
-  const headers = adminKey ? { 'x-admin-key': adminKey } : undefined;
-
-  const refreshData = async (key = adminKey) => {
-    if (!key) {
-      show('请先输入管理密钥，默认 admin-demo');
-      return;
-    }
+  const refreshData = async () => {
+    if (!authHeaders) return;
     try {
       const [rechargeRes, dealRes] = await Promise.all([
-        fetch('/api/admin/recharge', { headers: { 'x-admin-key': key } }),
-        fetch('/api/admin/deals', { headers: { 'x-admin-key': key } }),
+        fetch('/api/admin/recharge', { headers: authHeaders }),
+        fetch('/api/admin/deals', { headers: authHeaders }),
       ]);
       if (!rechargeRes.ok || !dealRes.ok) {
-        show('密钥无效');
+        show('加载失败');
         return;
       }
       const rechargeData = await rechargeRes.json();
       const dealData = await dealRes.json();
       setRecharges(rechargeData.data ?? []);
       setDeals(dealData.data ?? []);
-      window.localStorage.setItem(STORAGE_KEY, key);
     } catch (error) {
       show((error as Error).message);
     }
   };
 
   const handleRecharge = async (id: string, action: 'approve' | 'reject') => {
+    if (!authHeaders) return;
     const res = await fetch('/api/admin/recharge', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(headers as Record<string, string>) },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ id, action }),
     });
     if (!res.ok) {
@@ -62,9 +64,10 @@ export default function AdminPage() {
   };
 
   const remindDeals = async () => {
+    if (!authHeaders) return;
     const res = await fetch('/api/admin/deals', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(headers as Record<string, string>) },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ action: 'remind' }),
     });
     if (!res.ok) {
@@ -75,22 +78,23 @@ export default function AdminPage() {
     show(`已提醒 ${data.reminded} 位买家`);
   };
 
+  if (!tokens || (!isAdmin && !loading)) {
+    return (
+      <MainLayout>
+        <div className="page-section">正在校验权限...</div>
+        <Toast message={message} />
+      </MainLayout>
+    );
+  }
+
   return (
     <MainLayout>
       <div className="page-section">
-        <h2>后台运营工作台</h2>
-        <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-          <input value={adminKey} onChange={(e) => setAdminKey(e.target.value)} placeholder="Admin 密钥，默认 admin-demo" />
-          <button className="primary-btn" onClick={() => refreshData()}>
-            载入数据
-          </button>
-        </div>
-      </div>
-
-      <div className="page-section">
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3>充值审批</h3>
-          <span style={{ color: 'var(--muted)' }}>待处理：{recharges.length}</span>
+          <button className="secondary-btn" onClick={refreshData}>
+            刷新
+          </button>
         </div>
         <div style={{ display: 'grid', gap: 12 }}>
           {recharges.map((task) => (
@@ -115,8 +119,8 @@ export default function AdminPage() {
       </div>
 
       <div className="page-section">
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <h3>成交回执跟进</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3>成交回执待跟进</h3>
           <button className="secondary-btn" onClick={remindDeals}>
             发送提醒
           </button>
@@ -129,7 +133,7 @@ export default function AdminPage() {
               <div>截止：{new Date(item.confirmDeadline).toLocaleString()}</div>
             </div>
           ))}
-          {deals.length === 0 && <p style={{ color: 'var(--muted)' }}>暂无需要跟进的回执</p>}
+          {deals.length === 0 && <p style={{ color: 'var(--muted)' }}>暂无需要跟进的记录</p>}
         </div>
       </div>
       <Toast message={message} />

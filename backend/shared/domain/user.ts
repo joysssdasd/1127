@@ -1,20 +1,9 @@
 ﻿export type UserStatus = 'pending' | 'active' | 'suspended';
 
-export interface AuthIdentifier {
-  openId: string;
-  unionId?: string;
-}
-
-export interface DeviceFingerprint {
-  deviceId: string;
-  userAgent?: string;
-  ipAddress?: string;
-}
-
 export interface UserProfile {
   id: string;
   phone?: string;
-  wechat?: AuthIdentifier;
+  passwordHash?: string;
   status: UserStatus;
   points?: number;
   totalDeals?: number;
@@ -24,8 +13,8 @@ export interface UserProfile {
 
 export interface JwtPayload {
   sub: string;
-  openId: string;
-  deviceId: string;
+  phone: string;
+  role?: 'admin' | 'user';
   exp: number;
 }
 

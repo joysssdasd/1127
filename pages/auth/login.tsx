@@ -9,50 +9,66 @@ export default function LoginPage() {
   const { login, tokens } = useAuth();
   const router = useRouter();
   const { message, show } = useToast();
-  const [phone, setPhone] = useState('13800000000');
-  const [otp, setOtp] = useState('123456');
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
+  const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'start' | 'bind'>('start');
+  const [countdown, setCountdown] = useState(0);
 
-  const startLogin = async () => {
-    setLoading(true);
+  const sendCode = async () => {
+    if (!phone) {
+      show('请输入手机号');
+      return;
+    }
+    setSending(true);
     try {
-      const res = await fetch('/api/auth/start', { method: 'POST' });
-      if (!res.ok) throw new Error('拉取临时票据失败');
-      const data = await res.json();
-      setSessionToken(data.sessionToken);
-      setStep('bind');
-      show('授权成功，使用 123456 作为验证码');
-      await fetch('/api/auth/send-otp', {
+      const res = await fetch('/api/auth/send-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone }),
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? '发送失败');
+      show('验证码已发送');
+      setCountdown(60);
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     } catch (error) {
       show((error as Error).message);
     } finally {
-      setLoading(false);
+      setSending(false);
     }
   };
 
-  const bindPhone = async () => {
-    if (!sessionToken) {
-      show('请先完成微信授权');
+  const handleLogin = async () => {
+    if (!phone || !password || !code) {
+      show('请完整填写信息');
       return;
     }
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/bind-phone', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionToken, phone, otp }),
+        body: JSON.stringify({ phone, password, code }),
       });
-      if (!res.ok) throw new Error((await res.json()).error ?? '绑定失败');
       const data = await res.json();
-      login({ user: data.user, tokens: data.tokens });
+      if (!res.ok) throw new Error(data.error ?? '登录失败');
+      login({ user: data.user, tokens: data.tokens, isAdmin: data.isAdmin });
       show('登录成功');
-      setTimeout(() => router.push('/'), 500);
+      if (data.isAdmin) {
+        router.replace('/admin');
+      } else {
+        router.replace('/');
+      }
     } catch (error) {
       show((error as Error).message);
     } finally {
@@ -63,30 +79,30 @@ export default function LoginPage() {
   return (
     <MainLayout>
       <div className="page-section" style={{ maxWidth: 480, margin: '0 auto' }}>
-        <h2>微信 + 手机号 双重登录</h2>
-        <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 24 }}>使用模拟授权 + 验证码完成注册/登录。验证码固定为 123456，便于测试。</p>
+        <h2>短信 + 密码登录</h2>
+        <p style={{ color: 'var(--muted)', fontSize: 14 }}>验证码用于校验手机号归属，密码用于日常登录和敏感操作确认。</p>
         <div className="form-grid">
           <div>
             <label>手机号</label>
             <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="请输入手机号" />
           </div>
           <div>
-            <label>验证码</label>
-            <input value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="请输入验证码" />
-          </div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button className="primary-btn" style={{ flex: 1 }} onClick={startLogin} disabled={loading}>
-              1. 一键微信授权
-            </button>
-            <button className="primary-btn" style={{ flex: 1 }} onClick={bindPhone} disabled={loading || step === 'start'}>
-              2. 绑定手机号
-            </button>
-          </div>
-          {tokens && (
-            <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-              已登录。若需更换账号，可点击右上角退出再重新登录。
+            <label>短信验证码</label>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="6位验证码" style={{ flex: 1 }} />
+              <button className="secondary-btn" type="button" onClick={sendCode} disabled={sending || countdown > 0}>
+                {countdown > 0 ? `${countdown}s` : '发送验证码'}
+              </button>
             </div>
-          )}
+          </div>
+          <div>
+            <label>密码</label>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="至少6位" />
+          </div>
+          <button className="primary-btn" onClick={handleLogin} disabled={loading}>
+            {loading ? '登录中...' : '登录 / 注册'}
+          </button>
+          {tokens && <p style={{ fontSize: 13, color: 'var(--muted)' }}>已登录，如需切换账号请先退出。</p>}
         </div>
       </div>
       <Toast message={message} />
