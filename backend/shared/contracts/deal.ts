@@ -8,6 +8,7 @@
 export interface PurchaseContactResult {
   contactToken: string;
   confirmDeadline: Date;
+  contact: string;
 }
 
 export interface ConfirmDealInput {

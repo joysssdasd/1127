@@ -3,6 +3,7 @@
 export interface UserProfile {
   id: string;
   phone?: string;
+  wechat?: string;
   passwordHash?: string;
   status: UserStatus;
   points?: number;

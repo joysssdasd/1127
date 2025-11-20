@@ -5,6 +5,7 @@ import { PointsClient } from '../../shared/contracts/points';
 import { DomainEventBus } from '../../shared/utils/eventBus';
 import { ContactViewRepository, DealStatRepository } from './models/contact-view.entity';
 import { ListingRepository } from '../listing/repositories/listing.repo';
+import { UserRepository } from '../../shared/domain/userRepository';
 import { metrics } from '../../shared/observability/metrics';
 
 const CONTACT_COST = 1;
@@ -17,6 +18,7 @@ export class DealService implements DealServiceContract {
     private readonly listingRepo: ListingRepository,
     private readonly points: PointsClient,
     private readonly events: DomainEventBus,
+    private readonly users: UserRepository,
   ) {}
 
   async purchaseContact(input: PurchaseContactInput): Promise<PurchaseContactResult> {
@@ -36,9 +38,12 @@ export class DealService implements DealServiceContract {
       confirmPayload: undefined,
     });
 
+    const seller = await this.users.findById(input.sellerId);
+    const contactValue = seller?.wechat ?? seller?.phone ?? '卖家暂未提供联系方式';
+
     this.events.emit('deal.contact.purchased', { postId: input.postId, buyerId: input.buyerId });
     metrics.increment('deal.contact.purchased');
-    return { contactToken: token, confirmDeadline: deadline };
+    return { contactToken: token, confirmDeadline: deadline, contact: contactValue };
   }
 
   async confirmDeal(input: ConfirmDealInput): Promise<void> {
