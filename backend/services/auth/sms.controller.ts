@@ -18,6 +18,13 @@ function normalizePhone(phone: string): string {
   return phone.trim();
 }
 
+type LoginPayload = {
+  phone: string;
+  password?: string;
+  code?: string;
+  wechat?: string;
+};
+
 export class SmsPasswordAuthController {
   private readonly users: UserRepository;
   private readonly otp: OtpService;
@@ -54,28 +61,49 @@ export class SmsPasswordAuthController {
     await this.sendSms(normalized, code);
   }
 
-  async login(input: { phone: string; password: string; code: string }) {
+  async login(input: LoginPayload) {
     const phone = normalizePhone(input.phone);
-    if (!this.otp.verify(phone, input.code)) {
-      throw Errors.OtpInvalid;
-    }
-    if (!input.password || input.password.length < 6) {
-      throw Errors.PasswordTooWeak;
+    const existing = await this.users.findByPhone(phone);
+    const isAdminPhone = this.adminPhones.has(phone);
+
+    if (!input.code && isAdminPhone) {
+      throw Errors.AdminSmsOnly;
     }
 
-    let user = await this.users.findByPhone(phone);
-    if (!user) {
-      const passwordHash = await bcrypt.hash(input.password, 10);
-      user = await this.users.createWithPhone(phone, passwordHash);
-    } else {
-      await this.ensurePasswordMatches(user, input.password);
+    if (input.code) {
+      if (!this.otp.verify(phone, input.code)) {
+        throw Errors.OtpInvalid;
+      }
+      if (!existing) {
+        const password = this.requirePassword(input.password);
+        const wechat = this.requireWechat(input.wechat);
+        const passwordHash = await bcrypt.hash(password, 10);
+        let created = await this.users.createWithPhone(phone, passwordHash, wechat);
+        created.status = 'active';
+        created = await this.users.update(created);
+        return this.pack(created);
+      }
+      if (input.wechat && input.wechat !== existing.wechat) {
+        existing.wechat = input.wechat;
+      }
+      if (input.password && input.password.length >= 6) {
+        existing.passwordHash = await bcrypt.hash(input.password, 10);
+      }
+      existing.status = 'active';
+      const updated = await this.users.update(existing);
+      return this.pack(updated);
     }
-    user.status = 'active';
-    await this.users.update(user);
 
-    const isAdmin = this.adminPhones.has(phone);
-    const tokens = this.issueTokens(user, isAdmin);
-    return { tokens, user: this.stripSensitive(user), isAdmin };
+    if (!existing) {
+      throw Errors.InvalidCredentials;
+    }
+    const password = this.requirePassword(input.password);
+    await this.ensurePasswordMatches(existing, password);
+    if (input.wechat && input.wechat !== existing.wechat) {
+      existing.wechat = input.wechat;
+      await this.users.update(existing);
+    }
+    return this.pack(existing);
   }
 
   private async ensurePasswordMatches(user: UserProfile, password: string): Promise<void> {
@@ -92,6 +120,26 @@ export class SmsPasswordAuthController {
 
   private generateCode(): string {
     return (Math.floor(Math.random() * 900000) + 100000).toString();
+  }
+
+  private requirePassword(password?: string): string {
+    if (!password || password.length < 6) {
+      throw Errors.PasswordTooWeak;
+    }
+    return password;
+  }
+
+  private requireWechat(wechat?: string): string {
+    if (!wechat || !wechat.trim()) {
+      throw Errors.WeChatRequired;
+    }
+    return wechat.trim();
+  }
+
+  private pack(user: UserProfile) {
+    const isAdmin = this.adminPhones.has(user.phone ?? '');
+    const tokens = this.issueTokens(user, isAdmin);
+    return { tokens, user: this.stripSensitive(user), isAdmin };
   }
 
   private issueTokens(user: UserProfile, isAdmin: boolean) {

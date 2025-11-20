@@ -30,6 +30,7 @@ export interface ContactViewRepository {
   update(record: ContactViewRecord): Promise<void>;
   findById(id: string): Promise<ContactViewRecord | undefined>;
   listByPost(postId: string): Promise<ContactViewRecord[]>;
+  listByBuyer(buyerId: string): Promise<ContactViewRecord[]>;
 }
 
 export interface DealStatRepository {
@@ -60,6 +61,12 @@ export class InMemoryContactViewRepository implements ContactViewRepository {
 
   async listByPost(postId: string): Promise<ContactViewRecord[]> {
     return [...this.store.values()].filter((item) => item.postId === postId);
+  }
+
+  async listByBuyer(buyerId: string): Promise<ContactViewRecord[]> {
+    return [...this.store.values()]
+      .filter((item) => item.buyerId === buyerId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 }
 
@@ -182,6 +189,18 @@ export class SupabaseContactViewRepository implements ContactViewRepository {
       .from('contact_views')
       .select('*')
       .eq('post_id', postId)
+      .order('created_at', { ascending: false });
+    if (error) {
+      throw error;
+    }
+    return (data ?? []).map((row) => mapContactRow(row as ContactViewRow));
+  }
+
+  async listByBuyer(buyerId: string): Promise<ContactViewRecord[]> {
+    const { data, error } = await this.client
+      .from('contact_views')
+      .select('*')
+      .eq('buyer_id', buyerId)
       .order('created_at', { ascending: false });
     if (error) {
       throw error;

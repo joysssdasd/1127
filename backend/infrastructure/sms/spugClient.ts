@@ -1,5 +1,7 @@
 const DEFAULT_SMS_URL = process.env.SPUG_SMS_URL ?? 'https://push.spug.cc/send/Xyd9M8AlV5rKbDBk';
 const DEFAULT_SMS_NAME = process.env.SPUG_SMS_SENDER ?? 'C2C Info';
+const DEFAULT_SMS_USER_ID = process.env.SPUG_SMS_USER_ID ?? '5a73b0f94f134f03a9175c186a0f5fec';
+const DEFAULT_SMS_APP_KEY = process.env.SPUG_SMS_APP_KEY ?? 'ak_oYWyP1Dwvzk9qMjwxerBRgQp6E4NeAnb';
 
 interface SpugResponse {
   code?: number;
@@ -17,11 +19,17 @@ export async function sendVerificationCode(phone: string, code: string): Promise
     targets: phone,
   };
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (DEFAULT_SMS_USER_ID && DEFAULT_SMS_APP_KEY) {
+    headers['x-spug-user'] = DEFAULT_SMS_USER_ID;
+    headers['x-spug-app'] = DEFAULT_SMS_APP_KEY;
+  }
+
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify(body),
   });
 

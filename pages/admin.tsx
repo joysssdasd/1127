@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { MainLayout } from '../components/layout/MainLayout';
 import { useToast } from '../hooks/useToast';
@@ -16,18 +16,6 @@ export default function AdminPage() {
 
   const authHeaders = tokens ? { Authorization: `Bearer ${tokens.accessToken}` } : undefined;
 
-  useEffect(() => {
-    if (!loading) {
-      if (!tokens || !isAdmin) {
-        show('该页面仅管理员可访问');
-        router.replace('/');
-      } else {
-        refreshData();
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, tokens, isAdmin]);
-
   const refreshData = async () => {
     if (!authHeaders) return;
     try {
@@ -36,7 +24,7 @@ export default function AdminPage() {
         fetch('/api/admin/deals', { headers: authHeaders }),
       ]);
       if (!rechargeRes.ok || !dealRes.ok) {
-        show('加载失败');
+        show('数据加载失败');
         return;
       }
       const rechargeData = await rechargeRes.json();
@@ -48,6 +36,18 @@ export default function AdminPage() {
     }
   };
 
+  useEffect(() => {
+    if (!loading) {
+      if (!tokens || !isAdmin) {
+        show('仅管理员可访问');
+        router.replace('/');
+      } else {
+        refreshData();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, tokens, isAdmin]);
+
   const handleRecharge = async (id: string, action: 'approve' | 'reject') => {
     if (!authHeaders) return;
     const res = await fetch('/api/admin/recharge', {
@@ -56,7 +56,7 @@ export default function AdminPage() {
       body: JSON.stringify({ id, action }),
     });
     if (!res.ok) {
-      show('操作失败');
+      show('处理失败');
       return;
     }
     show(action === 'approve' ? '已通过' : '已拒绝');
@@ -78,10 +78,20 @@ export default function AdminPage() {
     show(`已提醒 ${data.reminded} 位买家`);
   };
 
+  const statCards = useMemo(
+    () => [
+      { title: '待审核充值', value: recharges.length },
+      { title: '待确认成交', value: deals.length },
+    ],
+    [recharges.length, deals.length],
+  );
+
   if (!tokens || (!isAdmin && !loading)) {
     return (
       <MainLayout>
-        <div className="page-section">正在校验权限...</div>
+        <div className="page-section">
+          <p>正在校验权限...</p>
+        </div>
         <Toast message={message} />
       </MainLayout>
     );
@@ -90,21 +100,38 @@ export default function AdminPage() {
   return (
     <MainLayout>
       <div className="page-section">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3>充值审批</h3>
+        <div className="section-heading">管理员面板</div>
+        <p className="section-subtitle">管理员必须使用短信模式登录，此处无公开入口。</p>
+        <div className="grid-two">
+          {statCards.map((stat) => (
+            <div key={stat.title} className="feature-card">
+              <h3 style={{ marginTop: 0 }}>{stat.title}</h3>
+              <p style={{ fontSize: 32, margin: 0 }}>{stat.value}</p>
+            </div>
+          ))}
+        </div>
+        <div className="cta-stack">
           <button className="secondary-btn" onClick={refreshData}>
-            刷新
+            刷新数据
+          </button>
+          <button className="primary-btn" onClick={remindDeals}>
+            一键提醒成交
           </button>
         </div>
-        <div style={{ display: 'grid', gap: 12 }}>
+      </div>
+
+      <div className="page-section">
+        <div className="section-heading">充值审核</div>
+        {recharges.length === 0 && <p style={{ color: 'var(--muted)' }}>暂无充值待审核。</p>}
+        <div className="listing-grid">
           {recharges.map((task) => (
-            <div key={task.id} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 16, display: 'flex', justifyContent: 'space-between' }}>
-              <div>
-                <div>用户：{task.userId}</div>
-                <div>金额：{task.amount}</div>
-                <div>凭证：{task.voucherUrl}</div>
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
+            <div key={task.id} className="list-card">
+              <h3>用户 {task.userId}</h3>
+              <p style={{ color: 'var(--muted)' }}>金额：{task.amount}</p>
+              <a href={task.voucherUrl} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: '#0a84ff' }}>
+                查看凭证
+              </a>
+              <div className="list-card-actions">
                 <button className="primary-btn" onClick={() => handleRecharge(task.id, 'approve')}>
                   通过
                 </button>
@@ -114,26 +141,24 @@ export default function AdminPage() {
               </div>
             </div>
           ))}
-          {recharges.length === 0 && <p style={{ color: 'var(--muted)' }}>暂无充值申请</p>}
         </div>
       </div>
 
       <div className="page-section">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3>成交回执待跟进</h3>
-          <button className="secondary-btn" onClick={remindDeals}>
-            发送提醒
-          </button>
-        </div>
-        <div style={{ display: 'grid', gap: 12 }}>
+        <div className="section-heading">待确认成交</div>
+        {deals.length === 0 && <p style={{ color: 'var(--muted)' }}>暂无待处理记录。</p>}
+        <div className="timeline">
           {deals.map((item) => (
-            <div key={item.id} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 16 }}>
-              <div>信息ID：{item.postId}</div>
-              <div>买家：{item.buyerId}</div>
-              <div>截止：{new Date(item.confirmDeadline).toLocaleString()}</div>
+            <div key={item.id} className="timeline-item">
+              <div className="timeline-dot" />
+              <div>
+                <strong>信息 {item.postId}</strong>
+                <p className="form-note">
+                  买家 {item.buyerId} · 截止 {new Date(item.confirmDeadline).toLocaleString()}
+                </p>
+              </div>
             </div>
           ))}
-          {deals.length === 0 && <p style={{ color: 'var(--muted)' }}>暂无需要跟进的记录</p>}
         </div>
       </div>
       <Toast message={message} />

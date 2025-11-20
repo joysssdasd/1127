@@ -5,6 +5,8 @@ import { useAuth } from '../components/auth/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { Toast } from '../components/ui/Toast';
 
+const quickFilters = ['教育', '企业服务', '供应链', '快消', '房源'];
+
 export default function SearchPage() {
   const { tokens } = useAuth();
   const { message, show } = useToast();
@@ -12,6 +14,7 @@ export default function SearchPage() {
   const [results, setResults] = useState<ListingSearchResult[]>([]);
   const [history, setHistory] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const loadHistory = async () => {
     if (!tokens) return;
@@ -31,10 +34,7 @@ export default function SearchPage() {
     }
     const handler = window.setTimeout(async () => {
       const authHeaders = tokens ? { Authorization: `Bearer ${tokens.accessToken}` } : undefined;
-      const res = await fetch(
-        `/api/search/suggestions?prefix=${encodeURIComponent(keyword.trim())}${tokens ? `&user=${tokens.accessToken}` : ''}`,
-        authHeaders ? { headers: authHeaders } : undefined,
-      );
+      const res = await fetch(`/api/search/suggestions?prefix=${encodeURIComponent(keyword.trim())}`, authHeaders ? { headers: authHeaders } : undefined);
       const data = await res.json();
       setSuggestions(data.data?.suggestions ?? []);
     }, 250);
@@ -44,14 +44,18 @@ export default function SearchPage() {
   const runSearch = async (value?: string) => {
     const q = value ?? keyword;
     if (!q.trim()) return;
-    const authHeaders = tokens ? { Authorization: `Bearer ${tokens.accessToken}` } : undefined;
-    const res = await fetch(
-      `/api/search?keyword=${encodeURIComponent(q.trim())}`,
-      authHeaders ? { headers: authHeaders } : undefined,
-    );
-    const data = await res.json();
-    setResults(data.data ?? []);
-    loadHistory();
+    setLoading(true);
+    try {
+      const authHeaders = tokens ? { Authorization: `Bearer ${tokens.accessToken}` } : undefined;
+      const res = await fetch(`/api/search?keyword=${encodeURIComponent(q.trim())}`, authHeaders ? { headers: authHeaders } : undefined);
+      const data = await res.json();
+      setResults(data.data ?? []);
+      loadHistory();
+    } catch (error) {
+      show((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const clearHistory = async () => {
@@ -63,33 +67,47 @@ export default function SearchPage() {
   return (
     <MainLayout>
       <div className="page-section">
-        <h2>智能搜索</h2>
-        <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-          <input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="输入关键字，支持模糊/拼音" style={{ flex: 1 }} />
-          <button className="primary-btn" onClick={() => runSearch()}>
-            搜索
+        <div className="section-heading">智能搜索</div>
+        <p className="section-subtitle">历史记录、AI 联想与人工推荐相结合，适合在移动端下拉刷新使用。</p>
+        <div className="input-row" style={{ marginBottom: 16 }}>
+          <input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="输入关键词、品牌或城市" style={{ flex: 1 }} />
+          <button className="primary-btn" onClick={() => runSearch()} disabled={loading}>
+            {loading ? '检索中...' : '搜索'}
           </button>
         </div>
         {suggestions.length > 0 && (
-          <div style={{ marginTop: 10, fontSize: 13, color: 'var(--muted)' }}>
-            热门：{' '}
-            {suggestions.map((item) => (
-              <button key={item} className="secondary-btn" onClick={() => runSearch(item)} style={{ marginRight: 8 }}>
-                {item}
-              </button>
-            ))}
+          <div style={{ marginBottom: 16 }}>
+            <div className="form-note">智能联想</div>
+            <div className="list-card-actions">
+              {suggestions.map((item) => (
+                <button key={item} className="secondary-btn" onClick={() => runSearch(item)}>
+                  {item}
+                </button>
+              ))}
+            </div>
           </div>
         )}
+        <div className="form-note">热门筛选</div>
+        <div className="list-card-actions">
+          {quickFilters.map((item) => (
+            <button key={item} className="secondary-btn" onClick={() => runSearch(item)}>
+              {item}
+            </button>
+          ))}
+        </div>
       </div>
+
       {history.length > 0 && (
         <div className="page-section">
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <h3>历史记录</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="section-heading" style={{ marginBottom: 0 }}>
+              历史记录
+            </div>
             <button className="secondary-btn" onClick={clearHistory}>
               清空
             </button>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div className="list-card-actions" style={{ marginTop: 16 }}>
             {history.map((item) => (
               <button key={item} className="secondary-btn" onClick={() => runSearch(item)}>
                 {item}
@@ -98,18 +116,22 @@ export default function SearchPage() {
           </div>
         </div>
       )}
+
       <div className="page-section">
-        <h3>匹配结果</h3>
-        {results.length === 0 && <p style={{ color: 'var(--muted)' }}>暂无结果，可尝试切换关键词。</p>}
-        <div style={{ display: 'grid', gap: 12 }}>
+        <div className="section-heading">搜索结果</div>
+        {results.length === 0 && !loading && <p style={{ color: 'var(--muted)' }}>暂无结果，换个维度试试。</p>}
+        <div className="listing-grid">
           {results.map((item) => (
-            <div key={item.id} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontWeight: 600 }}>{item.title}</div>
-                  <div style={{ color: 'var(--muted)', fontSize: 13 }}>剩余查看 {item.remainingViews}</div>
-                </div>
-                <div>¥{item.price}</div>
+            <div key={item.id} className="list-card">
+              <div className="meta-row">
+                <span className="chip">成交 {item.totalDeals ?? 0} 次</span>
+                <span className="chip emphasis">剩余 {item.remainingViews} 次</span>
+              </div>
+              <h3>{item.title}</h3>
+              <div className="meta-row">
+                <span className="badge">
+                  <strong>价格</strong> ¥{item.price}
+                </span>
               </div>
             </div>
           ))}
