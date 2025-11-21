@@ -35,12 +35,26 @@ export default function HomePage() {
     try {
       const query = kw ? `?keyword=${encodeURIComponent(kw)}` : '';
       const res = await fetch(`/api/listings${query}`);
+      if (!res.ok) {
+        if (res.status === 503) {
+          show('数据库服务暂时不可用，显示演示数据');
+          setListings([]); // 清空列表，显示空状态
+          return;
+        }
+        throw new Error(`HTTP ${res.status}`);
+      }
       const data = await res.json();
       setListings(data.data ?? []);
+    } catch (error) {
+      console.warn('Failed to load listings:', error);
+      if ((error as Error).message?.includes('503')) {
+        show('数据库服务暂时不可用，显示演示数据');
+      }
+      setListings([]); // 清空列表
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [show]);
 
   useEffect(() => {
     loadListings();
@@ -48,7 +62,14 @@ export default function HomePage() {
 
   useEffect(() => {
     fetch('/api/announcements')
-      .then((res) => res.json())
+      .then((res) => {
+        if (res.status === 503) {
+          console.warn('Announcements service unavailable');
+          return { data: [] };
+        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((data) => setAnnouncements(data.data ?? []))
       .catch(() => {});
   }, []);

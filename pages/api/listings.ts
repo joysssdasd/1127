@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import type { ListingPayload } from '../../backend/shared/contracts/listing';
 import { controllers } from '../../lib/server/controllers';
 import { requireAuth } from '../../lib/server/auth';
+import { handleDatabaseError, DatabaseError } from '../../lib/server/errorHandler';
 
 type ListingsResponse = {
   data?: ListingPayload | ListingPayload[];
@@ -17,7 +18,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse<ListingsRespo
       : data;
     res.status(200).json({ data: filtered });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    handleDatabaseError(res, error);
   }
 }
 

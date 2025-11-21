@@ -134,9 +134,23 @@ export class SupabaseUserRepository implements UserRepository {
 }
 
 export function createUserRepository(): UserRepository {
-  if (process.env.SUPABASE_URL && (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)) {
-    return new SupabaseUserRepository();
+  const url = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+
+  // 检查 Supabase 配置是否有效
+  if (url && serviceKey && url.startsWith('http')) {
+    try {
+      // 验证 URL 格式
+      new URL(url);
+      console.log('Using Supabase database backend');
+      return new SupabaseUserRepository();
+    } catch (error) {
+      console.warn('Invalid Supabase URL, falling back to in-memory storage:', error);
+    }
+  } else {
+    console.warn('Supabase not configured, using in-memory storage');
   }
+
   return new InMemoryUserRepository();
 }
 
