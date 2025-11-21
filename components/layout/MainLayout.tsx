@@ -15,3 +15,6 @@ export function NewMainLayout({ children }: NewMainLayoutProps) {
     </div>
   );
 }
+
+// 为了向后兼容，提供 MainLayout 别名
+export const MainLayout = NewMainLayout;

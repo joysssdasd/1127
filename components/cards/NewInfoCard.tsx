@@ -87,7 +87,7 @@ export function NewInfoCard({ listing, compact = false }: InfoCardProps) {
       {listing.images && listing.images.length > 0 && (
         <div className="relative mb-3">
           <EdgeOneOptimizedImage
-            src={listing.images[0]}
+            src={listing.images[0] || ''}
             alt={listing.title}
             className="w-full h-32 object-cover rounded-md"
             fallbackSrc="/api/placeholder/image.jpg"

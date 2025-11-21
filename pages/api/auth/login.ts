@@ -82,13 +82,13 @@ async function handleSmsLogin(phone: string, smsCode: string): Promise<LoginResp
 function generateTokens(user: UserProfile) {
   const payload = {
     sub: user.id,
-    phone: user.phone,
-    role: 'user',
+    phone: user.phone || '',
+    role: 'user' as const,
   };
 
   return {
-    accessToken: accessJwt.sign(payload),
-    refreshToken: refreshJwt.sign(payload),
+    accessToken: accessJwt.issue(payload),
+    refreshToken: refreshJwt.issue(payload),
     expiresIn: 60 * 60 * 24 * 30, // 30天
   };
 }

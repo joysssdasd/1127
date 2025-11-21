@@ -142,7 +142,7 @@ export function NewSearchBar({
               <div>
                 <div className="text-sm font-medium text-gray-900 mb-2">价格范围</div>
                 <select
-                  value={`${filters.priceRange[0]}-${filters.priceRange[1]}`}
+                  value={`${filters.priceRange?.[0] || 0}-${filters.priceRange?.[1] || 999999}`}
                   onChange={(e) => {
                     const [min, max] = e.target.value.split('-').map(Number);
                     setFilters(prev => ({

@@ -82,7 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       id: crypto.randomUUID(),
       phone,
       passwordHash,
-      wechat: wechat?.trim() || undefined,
+      wechat: wechat?.trim() || '',
       status: 'active',
       createdAt: new Date(),
       updatedAt: new Date(),

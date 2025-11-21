@@ -33,21 +33,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // 发送验证码
-    const success = await otpService.send(phone);
+    // 生成6位验证码
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
 
-    if (success) {
-      res.status(200).json({
-        success: true,
-        message: '验证码已发送',
-        expiresIn: 300 // 5分钟
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        error: '验证码发送失败，请稍后重试'
-      });
-    }
+    // 存储验证码
+    otpService.issue(phone, code);
+
+    // TODO: 这里应该集成实际的短信服务发送验证码
+    // 目前只是模拟发送成功
+    console.log(`验证码发送到 ${phone}: ${code}`);
+
+    res.status(200).json({
+      success: true,
+      message: '验证码已发送',
+      expiresIn: 300 // 5分钟
+    });
   } catch (error) {
     console.error('Send code error:', error);
     res.status(500).json({

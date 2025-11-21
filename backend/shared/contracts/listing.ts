@@ -1,4 +1,4 @@
-﻿export type ListingType = 'buy' | 'sell' | 'trade' | 'other';
+﻿export type ListingType = 'buy' | 'sell' | 'exchange' | 'service';
 
 export interface ListingPayload {
   title: string;
@@ -6,6 +6,9 @@ export interface ListingPayload {
   tradeType: ListingType;
   description: string;
   keywords: string[];
+  images?: string[];
+  tags?: string[];
+  originalPrice?: number;
   expiresAt: Date;
   remainingViews: number;
   status: 'active' | 'expired';
