@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { createUserRepository, UserRepository } from '../../shared/domain/userRepository';
 import type { UserProfile } from '../../shared/domain/user';
 import { OtpService } from '../../shared/utils/otp';

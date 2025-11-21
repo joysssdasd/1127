@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { requireAuth } from '../../../lib/server/auth';
 import { getUserRepository } from '../../../lib/server/repositories';
 import type { UserProfile } from '../../../backend/shared/domain/user';
