@@ -26,9 +26,13 @@
     "scripts": {
         "dev": "next dev",
         "build": "next build",
+        "build:production": "NODE_ENV=production next build",
         "start": "next start",
         "lint": "echo 'todo'",
-        "test": "jest"
+        "test": "jest",
+        "deploy:tencent": "node scripts/deploy-tencent.js",
+        "deploy:aliyun": "node scripts/deploy-aliyun.js",
+        "env:copy": "cp .env.production.example .env.production"
     },
     "devDependencies": {
         "@types/bcryptjs": "^2.4.6",
