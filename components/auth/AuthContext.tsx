@@ -53,12 +53,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (raw) {
       const parsed = JSON.parse(raw) as StoredTokens;
       setTokens(parsed);
-      fetchProfile(parsed.accessToken)
+      // 添加超时保护，防止 API 调用挂起
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('请求超时')), 5000); // 5秒超时
+      });
+
+      Promise.race([fetchProfile(parsed.accessToken), timeoutPromise])
         .then((result) => {
-          setUser(result.user);
-          setIsAdmin(result.isAdmin);
+          setUser((result as { user: UserProfile; isAdmin: boolean }).user);
+          setIsAdmin((result as { user: UserProfile; isAdmin: boolean }).isAdmin);
         })
-        .catch(() => {
+        .catch((error) => {
+          console.warn('获取用户信息失败:', error);
           window.localStorage.removeItem(STORAGE_KEY);
           setTokens(null);
           setIsAdmin(false);
