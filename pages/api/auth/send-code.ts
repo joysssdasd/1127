@@ -39,13 +39,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 存储验证码
     otpService.issue(phone, code);
 
-    // TODO: 这里应该集成实际的短信服务发送验证码
-    // 目前只是模拟发送成功
-    console.log(`验证码发送到 ${phone}: ${code}`);
+    // 调试：在控制台显示验证码（仅开发环境）
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🔔 短信验证码 - 手机号: ${phone}, 验证码: ${code}`);
+    }
 
     res.status(200).json({
       success: true,
-      message: '验证码已发送',
+      message: process.env.NODE_ENV === 'development'
+        ? `开发模式：验证码为 ${code}`
+        : '验证码已发送，请查收短信',
+      code: process.env.NODE_ENV === 'development' ? code : undefined, // 仅开发模式返回验证码
       expiresIn: 300 // 5分钟
     });
   } catch (error) {

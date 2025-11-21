@@ -12,6 +12,8 @@ export default function HomePage() {
   const { message, show } = useToast();
   const [listings, setListings] = useState<ListingPayload[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [databaseWarning, setDatabaseWarning] = useState<string | null>(null);
   const [currentKeyword, setCurrentKeyword] = useState('');
   const [currentFilters, setCurrentFilters] = useState<SearchFilters>({
     tradeTypes: [],
@@ -22,6 +24,9 @@ export default function HomePage() {
   // 加载交易信息列表
   const loadListings = useCallback(async (keyword?: string, filters?: SearchFilters) => {
     setLoading(true);
+    setError(null);
+    setDatabaseWarning(null);
+
     try {
       const params = new URLSearchParams();
 
@@ -48,21 +53,35 @@ export default function HomePage() {
       const res = await fetch(`/api/listings${query ? `?${query}` : ''}`);
 
       if (!res.ok) {
-        if (res.status === 503) {
-          show('数据库服务暂时不可用，显示演示数据');
+        if (res.status === 503 || res.status === 502) {
+          setError('数据库服务暂时不可用');
           setListings([]);
           return;
         }
-        throw new Error(`HTTP ${res.status}`);
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       }
 
       const data = await res.json();
+
+      // 检查是否有数据库警告
+      if (data.warning) {
+        setDatabaseWarning(data.warning);
+        show('数据库连接失败，显示演示数据');
+      }
+
       setListings(data.data ?? []);
     } catch (error) {
       console.warn('Failed to load listings:', error);
-      if ((error as Error).message?.includes('503')) {
-        show('数据库服务暂时不可用，显示演示数据');
+      const errorMessage = (error as Error).message;
+
+      if (errorMessage.includes('503') || errorMessage.includes('502')) {
+        setError('数据库服务暂时不可用，请稍后重试');
+      } else if (errorMessage.includes('Failed to fetch')) {
+        setError('无法连接到服务器，请检查网络连接');
+      } else {
+        setError('加载数据时发生错误');
       }
+
       setListings([]);
     } finally {
       setLoading(false);
@@ -91,12 +110,12 @@ export default function HomePage() {
       />
 
       {/* 交易信息列表 */}
-      <div className="px-4 sm:px-6 lg:px-8 py-4">
-        <CompactListingsList
-          listings={listings}
-          loading={loading}
-        />
-      </div>
+      <CompactListingsList
+        listings={listings}
+        loading={loading}
+        error={error}
+        databaseWarning={databaseWarning}
+      />
 
       {/* Toast 提示组件 */}
       <Toast message={message} />
