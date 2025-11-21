@@ -26,17 +26,22 @@
     "scripts": {
         "dev": "next dev",
         "build": "next build",
+        "build:edgeone": "cross-env EDGEONE_DEPLOY=true NODE_ENV=production next build",
         "build:production": "NODE_ENV=production next build",
         "start": "next start",
         "lint": "echo 'todo'",
         "test": "jest",
         "deploy:tencent": "node scripts/deploy-tencent.js",
+        "deploy:edgeone": "node scripts/deploy-edgeone.js",
         "deploy:aliyun": "node scripts/deploy-aliyun.js",
-        "env:copy": "cp .env.production.example .env.production"
+        "deploy:vercel": "vercel --prod",
+        "env:copy": "cp .env.production.example .env.production",
+        "env:edgeone": "cp .env.edgeone.example .env.edgeone"
     },
     "devDependencies": {
         "@types/bcryptjs": "^2.4.6",
         "@types/jsonwebtoken": "^9.0.10",
-        "@types/node": "^22.10.1"
+        "@types/node": "^22.10.1",
+        "cross-env": "^10.1.0"
     }
 }

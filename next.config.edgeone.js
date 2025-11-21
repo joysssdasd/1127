@@ -1,14 +1,48 @@
-// next.config.js - 动态配置文件
+// Next.js 配置 - EdgeOne 部署
 /** @type {import('next').NextConfig} */
-
 const isEdgeOne = process.env.EDGEONE_DEPLOY === 'true';
-const isProduction = process.env.NODE_ENV === 'production';
 
-console.log(`🚀 Next.js 配置: ${isEdgeOne ? 'EdgeOne' : 'Vercel'} | ${isProduction ? 'Production' : 'Development'}`);
-
-const baseConfig = {
+const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+
+  // EdgeOne 特定配置
+  ...(isEdgeOne ? {
+    // 静态导出配置
+    output: 'export',
+    trailingSlash: true,
+
+    // 图片优化配置（EdgeOne 静态托管不支持 Next.js 图片优化）
+    images: {
+      unoptimized: true,
+      domains: [
+        'cdn.your-domain.com',
+        'your-domain.com'
+      ]
+    },
+
+    // 资源前缀
+    assetPrefix: process.env.EDGEONE_DOMAIN || '',
+
+    // 基础路径
+    basePath: process.env.EDGEONE_BASE_PATH || '',
+  } : {
+    // 原有配置用于 Vercel 部署
+    experimental: {
+      optimizePackageImports: ['@supabase/supabase-js']
+    },
+    images: {
+      domains: [
+        'cdn.your-domain.com',
+        'your-domain.com'
+      ],
+      formats: ['image/webp', 'image/avif'],
+      minimumCacheTTL: 60 * 60 * 24 * 30,
+    },
+    assetPrefix: process.env.CDN_DOMAIN,
+  }),
+
+  // 通用配置
   compress: true,
   poweredByHeader: false,
   generateEtags: false,
@@ -17,7 +51,6 @@ const baseConfig = {
   env: {
     NEXT_PUBLIC_DEPLOY_TARGET: isEdgeOne ? 'edgeone' : 'vercel',
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
-    NEXT_PUBLIC_APP_VERSION: '1.0.0',
   },
 
   // 重定向规则
@@ -28,6 +61,27 @@ const baseConfig = {
         destination: '/',
         permanent: true,
       },
+      // EdgeOne 特定重定向
+      ...(isEdgeOne ? [
+        {
+          source: '/api/:path*',
+          destination: `${process.env.API_ENDPOINT || 'https://api.your-domain.com'}/api/:path*`,
+          permanent: false,
+        }
+      ] : [])
+    ];
+  },
+
+  // 重写规则（用于 API 代理）
+  async rewrites() {
+    return [
+      // EdgeOne 部署时的 API 代理
+      ...(isEdgeOne && process.env.API_ENDPOINT ? [
+        {
+          source: '/api/:path*',
+          destination: `${process.env.API_ENDPOINT}/api/:path*`,
+        }
+      ] : [])
     ];
   },
 
@@ -86,74 +140,17 @@ const baseConfig = {
 
   // Webpack 配置
   webpack: (config, { isServer }) => {
-    if (isEdgeOne && !isServer) {
-      // EdgeOne 浏览器环境的特殊配置
+    if (isEdgeOne) {
+      // EdgeOne 特定的 Webpack 配置
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
         net: false,
         tls: false,
-        child_process: false,
       };
     }
     return config;
   },
 };
 
-// EdgeOne 特定配置
-if (isEdgeOne) {
-  console.log('🎯 应用 EdgeOne 配置...');
-
-  module.exports = {
-    ...baseConfig,
-
-    // 静态导出配置
-    output: 'export',
-    trailingSlash: true,
-    distDir: 'out',
-
-    // 图片配置（EdgeOne 不支持 Next.js 图片优化）
-    images: {
-      unoptimized: true,
-      domains: [
-        'cdn.your-domain.com',
-        'your-domain.com',
-        process.env.EDGEONE_DOMAIN || '',
-      ].filter(Boolean),
-    },
-
-    // 资源前缀
-    ...(process.env.EDGEONE_DOMAIN ? {
-      assetPrefix: process.env.EDGEONE_DOMAIN,
-    } : {}),
-
-    // 基础路径
-    ...(process.env.EDGEONE_BASE_PATH ? {
-      basePath: process.env.EDGEONE_BASE_PATH,
-    } : {}),
-  };
-} else {
-  console.log('☁️ 应用 Vercel 配置...');
-
-  module.exports = {
-    ...baseConfig,
-
-    // Vercel 特定配置
-    experimental: {
-      optimizePackageImports: ['@supabase/supabase-js'],
-    },
-
-    images: {
-      domains: [
-        'cdn.your-domain.com',
-        'your-domain.com',
-      ],
-      formats: ['image/webp', 'image/avif'],
-      minimumCacheTTL: 60 * 60 * 24 * 30,
-    },
-
-    ...(process.env.CDN_DOMAIN ? {
-      assetPrefix: process.env.CDN_DOMAIN,
-    } : {}),
-  };
-}
+module.exports = nextConfig;
