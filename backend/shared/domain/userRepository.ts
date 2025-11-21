@@ -25,7 +25,6 @@ export class InMemoryUserRepository implements UserRepository {
     const profile: UserProfile = {
       id: crypto.randomUUID(),
       phone,
-      wechat,
       passwordHash,
       status: 'active',
       createdAt: now,
@@ -33,6 +32,12 @@ export class InMemoryUserRepository implements UserRepository {
       points: 0,
       totalDeals: 0,
     };
+
+    // 在 exactOptionalPropertyTypes 模式下，需要明确处理可选属性
+    if (wechat !== undefined) {
+      profile.wechat = wechat;
+    }
+
     this.users.set(profile.id, profile);
     return profile;
   }
